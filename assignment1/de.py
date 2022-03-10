@@ -8,13 +8,14 @@ from numpy import argmin
 from numpy import min
 from numpy import around
 from matplotlib import pyplot
+from numpy import exp
  
  
 # define objective function
 def obj(x):
-    # return x[0]**2.0 + x[1]**2.0
+     #eturn x[0]**2.0 + x[1]**2.0
     # REPLACE WITH EGGHOLDER FUNCTION
-    return -(x[ 2 ]+47)*sin(sqrt(fabs(x[ 2 ]+x[ 1 ]/2+47)))-x[ 1 ]*sin(sqrt(fabs(x[ 1 ]-(x[ 2 ]+47))))
+    return -(x[ 1 ]+47)*sin(sqrt(fabs(x[ 1 ]+x[ 0 ]/2+47)))-x[ 0 ]*sin(sqrt(fabs(x[ 0 ]-(x[ 1 ]+47))))
  
 # define mutation operation
 def mutation(x, k, f):
@@ -83,7 +84,7 @@ def differential_evolution(pop_size, bounds, iter, k, f, cr):
  
  
 # define population size
-pop_size = 20
+pop_size = 200
 # define lower and upper bounds for every dimension
 bounds = asarray([(-512, 512), (-512, 512)])
 # define number of iterations
