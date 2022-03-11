@@ -1,106 +1,79 @@
-from math import fabs, sin, sqrt
-from random import uniform
-from numpy.random import rand
-from numpy.random import choice
-from numpy import asarray
-from numpy import clip
-from numpy import argmin
-from numpy import min
-from numpy import around
-from matplotlib import pyplot
-from numpy import exp
+import math
+import random
+import numpy
+import matplotlib.pyplot
  
+def cost_calculate(x, function_choice):
+    if function_choice == 1:
+        return -(x[1]+47)*math.sin(math.sqrt(math.fabs(x[1]+x[0]/2+47)))-x[0]*math.sin(math.sqrt(math.fabs(x[0]-(x[1]+47))))
+    else:
+        return -abs(math.sin(x[0]) * math.cos(x[1]) * math.exp(abs(1 - ((x[0]**2 + x[1]**2)**(1/2))/math.pi)))
  
-# define objective function
-def obj(x):
-     #eturn x[0]**2.0 + x[1]**2.0
-    # REPLACE WITH EGGHOLDER FUNCTION
-    return -(x[ 1 ]+47)*sin(sqrt(fabs(x[ 1 ]+x[ 0 ]/2+47)))-x[ 0 ]*sin(sqrt(fabs(x[ 0 ]-(x[ 1 ]+47))))
- 
-# define mutation operation
-def mutation(x, k, f):
-    return x[0] + k * (x[1] - x[0]) + f * (x[2] - x[3]) 
- 
- 
-# define boundary check operation
-def check_bounds(mutated, bounds):
-    mutated_bound = [clip(mutated[i], bounds[i, 0], bounds[i, 1]) for i in range(len(bounds))]
-    return mutated_bound
- 
- 
-# define crossover operation
-def crossover(mutated, target, dims, cr):
-    # generate a uniform random value for every dimension
-    p = rand(dims)
-    # generate trial vector by binomial crossover
-    trial = [mutated[i] if p[i] < cr else target[i] for i in range(dims)]
-    return trial
- 
- 
-def differential_evolution(pop_size, bounds, iter, k, f, cr):
-    # initialise population of candidate solutions randomly within the specified bounds
-    pop = bounds[:, 0] + (rand(pop_size, len(bounds)) * (bounds[:, 1] - bounds[:, 0]))
-    # evaluate initial population of candidate solutions
-    obj_all = [obj(ind) for ind in pop]
-    # find the best performing vector of initial population
-    best_vector = pop[argmin(obj_all)]
-    best_obj = min(obj_all)
-    prev_obj = best_obj
-    # initialise list to store the objective function value at each iteration
-    obj_iter = list()
-    # run iterations of the algorithm
+def differential_evolution(population_size, boundary_conditions, iter, K, F, cr, function_choice):
+    bounds_diff = boundary_conditions[:, 1] - boundary_conditions[:, 0]
+    population = boundary_conditions[:, 0] + (numpy.random.rand(population_size, len(boundary_conditions)) * bounds_diff)
+    cost = [cost_calculate(candidate, function_choice) for candidate in population]
+
+    best_vector = population[numpy.argmin(cost)]
+    best_cost = min(cost)
+    prev_cost = best_cost
+    generation_best_cost = list()
+    generation_avg_cost = list()
     for i in range(iter):
-        # iterate over all candidate solutions
-        for j in range(pop_size):
-            # choose three candidates, a, b and c, that are not the current one
-            candidates = [candidate for candidate in range(pop_size) if candidate != j]
-            a, b, c, d = pop[choice(candidates, 4, replace=False)]
-            # perform mutation
-            mutated = mutation([a, b, c, d], k, f)
-            # check that lower and upper bounds are retained after mutation
-            mutated = check_bounds(mutated, bounds)
-            # perform crossover
-            trial = crossover(mutated, pop[j], len(bounds), cr)
-            # compute objective function value for target vector
-            obj_target = obj(pop[j])
-            # compute objective function value for trial vector
-            obj_trial = obj(trial)
-            # perform selection
-            if obj_trial < obj_target:
-                # replace the target vector with the trial vector
-                pop[j] = trial
-                # store the new objective function value
-                obj_all[j] = obj_trial
-        # find the best performing vector at each iteration
-        best_obj = min(obj_all)
-        # store the lowest objective function value
-        if best_obj < prev_obj:
-            best_vector = pop[argmin(obj_all)]
-            prev_obj = best_obj
-            obj_iter.append(best_obj)
-            # report progress at each iteration
-            print('Iteration: %d f([%s]) = %.5f' % (i, around(best_vector, decimals=5), best_obj))
-    return [best_vector, best_obj, obj_iter]
+        for j in range(population_size):
+            candidates = [candidate for candidate in range(population_size) if candidate != j]
+            x, x_r1, x_r2, x_r3 = population[numpy.random.choice(candidates, 4, replace=False)]
+
+            # mutation
+            mutant_vector = x + K * (x_r1 - x) + F * (x_r2 - x_r3)
+            mutant_vector = [numpy.clip(mutant_vector[i], boundary_conditions[i, 0], boundary_conditions[i, 1]) for i in range(len(boundary_conditions))]
+
+            # crossover
+            random_crossover_point = numpy.random.rand(len(boundary_conditions))
+            trial_vector = [mutant_vector[i] if random_crossover_point[i] < cr else population[j][i] for i in range(len(boundary_conditions))]
+            
+            target_vector_cost = cost_calculate(population[j], function_choice)
+            trial_vector_cost = cost_calculate(trial_vector, function_choice)
+            # selection
+            if trial_vector_cost < target_vector_cost:
+                population[j] = trial_vector
+                cost[j] = trial_vector_cost
+        best_cost = min(cost)
+        avg_cost = sum(cost) / len(cost)
+        generation_best_cost.append(best_cost)
+        generation_avg_cost.append(avg_cost)
+        if best_cost < prev_cost:
+            best_vector = population[numpy.argmin(cost)]
+            prev_cost = best_cost
+    return [best_vector, best_cost, generation_best_cost, generation_avg_cost]
  
- 
-# define population size
-pop_size = 200
-# define lower and upper bounds for every dimension
-bounds = asarray([(-512, 512), (-512, 512)])
+function_choice = int(input("Enter the name of desired function: egg holder(1) or holder table(2): "))
+
+# population size
+pop_size = 20
+
+# boundary conditions
+if function_choice == 1:
+    boundary_conditions = numpy.asarray([(-512, 512), (-512, 512)])
+else:
+    boundary_conditions = numpy.asarray([(-10, 10), (-10, 10)])
+
 # define number of iterations
-iter = 50
-# define scale factor for mutation
-f = 0.5
-k = uniform(-2, 2)
-# define crossover rate for recombination
-cr = 0.7
+generation_count = 50
+
+# hyper parameters
+K = 0.5
+F = random.uniform(-2, 2)
+cr = 0.8
  
-# perform differential evolution
-solution = differential_evolution(pop_size, bounds, iter, k, f, cr)
-print('\nSolution: f([%s]) = %.5f' % (around(solution[0], decimals=5), solution[1]))
+result_arr = differential_evolution(pop_size, boundary_conditions, generation_count, F, K, cr, function_choice)
+print("Solution:")
+print(result_arr[0])
+print("Cost of the solution: %f" % result_arr[1])
  
-# line plot of best objective function values
-pyplot.plot(solution[2], '.-')
-pyplot.xlabel('Improvement Number')
-pyplot.ylabel('Evaluation f(x)')
-pyplot.show()
+matplotlib.pyplot.plot(result_arr[2], '.-')
+matplotlib.pyplot.legend(["minimum cost and avg cost"])
+matplotlib.pyplot.plot(result_arr[3], '.-')
+matplotlib.pyplot.xlabel("Iteration")
+matplotlib.pyplot.ylabel("Cost")
+matplotlib.pyplot.show()
