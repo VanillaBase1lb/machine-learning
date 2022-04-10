@@ -2,14 +2,13 @@
 
 import csv
 import numpy
+import pandas
 
 input_file = open("input.csv", "r")
 csv_file = csv.reader(input_file)
 
 csv_header = []
 csv_header = next(csv_file)
-
-# print(csv_header)
 
 data = []
 for row in csv_file:
@@ -18,10 +17,11 @@ for row in csv_file:
 data = [[int(element) for element in column] for column in data]
 # print(data)
 
-# normalization_upper_bound = [max([element[0] for element in data]), max([element[1] for element in data])]
-# normalization_lower_bound = [min([element[0] for element in data]), min([element[1] for element in data])]
-normalization_upper_bound = [10, 30]
-normalization_lower_bound = [-10, -30]
+normalization_upper_bound = [max([element[0] for element in data]), max([element[1] for element in data])]
+normalization_lower_bound = [min([element[0] for element in data]), min([element[1] for element in data])]
+# uncomment the below 2 lines and comment the above 2 lines to hard-code normalization upper and lower bounds
+# normalization_upper_bound = [10, 30]
+# normalization_lower_bound = [-10, -30]
 
 normalized_data = []
 
@@ -29,8 +29,6 @@ for i in range(len(data)):
     normalized_data.append((data[i]))
     for j in range(len(data[i])):
         normalized_data[i][j] = (2 * data[i][j] - (normalization_upper_bound[j] + normalization_lower_bound[j])) / (normalization_upper_bound[j] - normalization_lower_bound[j])
-
-# print(normalized_data)
 
 fam = [[1, 1, 1, 1, 1, 1, 1],
     [1, 1, 1, 1, 1, 1, 2],
@@ -45,8 +43,7 @@ def degreeOfBelonging(normalized_input):
     degree = [0 for i in range(len(boundaries))]
     if normalized_input < boundaries[0]:
         degree[0] = 1
-    elif normalized_input > boundaries[-1]:  # These are corner cases that do not have any overlapping
-        # sets, so an input fully belongs to the corner set.
+    elif normalized_input > boundaries[-1]:
         degree[-1] = 1
     else:
         for i in range(len(boundaries) - 1):
@@ -58,10 +55,8 @@ def degreeOfBelonging(normalized_input):
 
 fuzzified_input1 = [degreeOfBelonging(element[0]) for element in normalized_data]
 fuzzified_input2 = [degreeOfBelonging(element[1]) for element in normalized_data]
-# print(fuzzified_input1)
-# print(fuzzified_input2)
 
-def subCentroids(fam):
+def returnNewFAM(fam):
     finalFam = []
     for sections in fam:
         section = []
@@ -85,11 +80,9 @@ def subCentroids(fam):
             elif (subsets == 9):
                 section.append(0.95)
         finalFam.append(section)
-    # finalFam = np.array(finalFam)
     return finalFam
 
-# print(subCentroids(fam))
-new_fam = subCentroids(fam)
+new_fam = returnNewFAM(fam)
 
 def defuzzify(dob1, dob2, fam):
     dob1t = numpy.array(dob1)
@@ -101,18 +94,25 @@ def defuzzify(dob1, dob2, fam):
     intensityweights = dob1t @ dob2t
     for i in range(len(intensityweights)):
         for j in range(len(intensityweights[0])):
-            num = num + intensityweights[i][j]*fam[i][j]
+            num = num + intensityweights[i][j] * fam[i][j]
             den = den + intensityweights[i][j]
             
-    # print(num, den)
-    z = num/den
+    z = num / den
     return z
 
-res = []
+result = []
 for i in range(len(data)):
-    # Results and their denormalisation to [0, 100]
-    res.append(round(50 * (1 + defuzzify(fuzzified_input1[i], fuzzified_input2[i], new_fam)), 3))
-
-input_file.write("output.csv")
+    result.append(round(50 * (1 + defuzzify(fuzzified_input1[i], fuzzified_input2[i], new_fam)), 3))
 
 input_file.close()
+input_file = open("input.csv", "r")
+output_file = open("output.csv", "w+")
+output_file.write(input_file.read())
+input_file.close()
+output_file.close()
+
+output_file_pd = pandas.read_csv("output.csv")
+output_file_pd["Breakoutability"] = result
+output_file_pd.to_csv("output.csv", index=False)
+
+print(output_file_pd)
